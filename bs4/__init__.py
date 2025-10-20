@@ -54,6 +54,8 @@ from collections import Counter
 import sys
 import warnings
 
+from bs4.replacer import SoupReplacer
+
 # The very first thing we do is give a useful error if someone is
 # running this code under Python 2.
 if sys.version_info.major < 3:
@@ -180,6 +182,7 @@ class BeautifulSoup(Tag):
     is_xml: bool
     known_xml: Optional[bool]
     parse_only: Optional[SoupStrainer]  #: :meta private:
+    replacer: Optional[SoupReplacer]
 
     # These members are only used while parsing markup.
     markup: Optional[_RawMarkup]  #: :meta private:
@@ -212,6 +215,7 @@ class BeautifulSoup(Tag):
         features: Optional[Union[str, Sequence[str]]] = None,
         builder: Optional[Union[TreeBuilder, Type[TreeBuilder]]] = None,
         parse_only: Optional[SoupStrainer] = None,
+        replacer: Optional[SoupReplacer] = None,
         from_encoding: Optional[_Encoding] = None,
         exclude_encodings: Optional[_Encodings] = None,
         element_classes: Optional[Dict[Type[PageElement], Type[PageElement]]] = None,
@@ -435,6 +439,7 @@ class BeautifulSoup(Tag):
         self.known_xml = self.is_xml
         self._namespaces = dict()
         self.parse_only = parse_only
+        self.replacer = replacer
 
         if hasattr(markup, "read"):  # It's a file-type object.
             markup = markup.read()
@@ -1024,6 +1029,9 @@ class BeautifulSoup(Tag):
             and not self.parse_only.allow_tag_creation(nsprefix, name, attrs)
         ):
             return None
+
+        if self.replacer and (name.strip().lower() == self.replacer.og_tag):
+            name = self.replacer.alt_tag
 
         tag_class = self.element_classes.get(Tag, Tag)
         # Assume that this is either Tag or a subclass of Tag. If not,
