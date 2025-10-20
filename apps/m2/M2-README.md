@@ -147,3 +147,101 @@ I also included some additional non-API calls that I felt were interesting to no
 
 
 ## Part 3
+
+I implemented a very simple SoupReplacer which, during parsing, replaces all instances of a given tag with a new tag in 
+the following way: 
+
+1. Create the SoupReplacer class in bs4/replacer.py, with the simple init class for storing the two tags. The tags fed 
+in as arguments in the init are stored in the class as self.og_tag and self.alt_tag, and have .strip() and .lower() 
+applied to them (not explicitly requested, but I thought it would be nice to have).
+
+2. Define an Optional[SoupReplacer] ```replacer``` argument in the BeautifulSoup constructor (bs4/__init__.py), which 
+is stored as self.replacer.
+
+3. Within BeautifulSoap method handle_starttag, which is called when a new tag is encountered during parsing, if 
+self.replacer is defined, and the newly encountered tag's name is equal to self.replacer.og_tag, then the tag name is 
+replaced with self.replacer.alt_tag, and all other info (classes, args, et cetera) is kept the same.
+
+In this way, we can define a SoupReplacer object and pass into the BeautifulSoup constructor to replace all instances 
+of the og-tag with the alt-tag while parsing, as in example ```BeautifulSoup(html_doc, replacer=SoupReplacer(“b”, “blockquote”))```
+
+To confirm the SoupReplacer works, I created the following two tests (8 test cases total) in bs4/tests/test_replacer.py:
+
+- ```test_default_replacer``` : Default sanity check test, to confirm that the replacer works with basic HTML
+- ```test_nestled_tags``` : Parametrized test to confirm that the replacer works with nested tags (eg, "<b><title><b>Some Text</b></title></b>")
+
+All 8 test cases pass, as expected:
+```
+============================= test session starts =============================
+collecting ... collected 8 items
+
+bs4/tests/test_replacer.py::TestReplacer::test_default_replacer PASSED   [ 12%]
+bs4/tests/test_replacer.py::TestReplacer::test_nestled_tags[<b>Some Text</b>-<blockquote>Some Text</blockquote>] PASSED [ 25%]
+bs4/tests/test_replacer.py::TestReplacer::test_nestled_tags[<b><b>Some Text</b></b>-<blockquote><blockquote>Some Text</blockquote></blockquote>] PASSED [ 37%]
+bs4/tests/test_replacer.py::TestReplacer::test_nestled_tags[<b><b><b>Some Text</b></b></b>-<blockquote><blockquote><blockquote>Some Text</blockquote></blockquote></blockquote>] PASSED [ 50%]
+bs4/tests/test_replacer.py::TestReplacer::test_nestled_tags[<title><p><b>Some Text</b></p></title>-<title><p><blockquote>Some Text</blockquote></p></title>] PASSED [ 62%]
+bs4/tests/test_replacer.py::TestReplacer::test_nestled_tags[<title><b><p>Some Text</p></b></title>-<title><blockquote><p>Some Text</p></blockquote></title>] PASSED [ 75%]
+bs4/tests/test_replacer.py::TestReplacer::test_nestled_tags[<b><title><p>Some Text</p></title></b>-<blockquote><title><p>Some Text</p></title></blockquote>] PASSED [ 87%]
+bs4/tests/test_replacer.py::TestReplacer::test_nestled_tags[<b><title><b>Some Text</b></title></b>-<blockquote><title><blockquote>Some Text</blockquote></title></blockquote>] PASSED [100%]
+
+============================== 8 passed in 0.15s ==============================
+```
+
+We can now re-write task6 using our newly implemented SoupReplacer. We define the SoupReplacer object as 
+```b_to_blockquote = SoupReplacer("b", "blockquote")```, and pass into the BeautifulSoup constructor as 
+```BeautifulSoup(f, parser, replacer=b_to_blockquote)```.
+
+To run task6, run the following command from the command line, substituting in the appropriate file name:
+
+```python task6.py <input_html_or_xml_file> <output_file>```
+
+For example, I ran the following command, targeting small_sample_file_2.html (here, I provided the full paths to the 
+files used in milestone-1, so as to reduce copying):
+
+```python task6.py "C:\Users\19493\Desktop\UCI\SWE262P-SWStyles\SWE262PProject\Milestone-1\sample_files\small_sample_file_2.html" "C:\Users\19493\Desktop\UCI\SWE262P-SWStyles\SWE262PProject\Milestone-1\output_files\small_sample_file_2.html"```
+
+We see bold text from the input file:
+```html
+...
+    <td>Centro <b class="class1">comercial</b> Moctezuma</td>
+    <td><b>Francisco Chang</b></td>
+...
+    <td>Laughing <b class="class1;class2">Bacchus Winecellars</b></td>
+...
+    <td><b class="class2">Magazzini Alimentari Riuniti</b></td>
+...
+```
+
+Replaced with blockquotes in the output file:
+```html
+...
+    <td>
+     Centro
+     <blockquote class="class1">
+      comercial
+     </blockquote>
+     Moctezuma
+    </td>
+    <td>
+     <blockquote>
+      Francisco Chang
+     </blockquote>
+    </td>
+...
+    <td>
+     Laughing
+     <blockquote class="class1;class2">
+      Bacchus Winecellars
+     </blockquote>
+    </td>
+...
+    <td>
+     <blockquote class="class2">
+      Magazzini Alimentari Riuniti
+     </blockquote>
+    </td>
+...
+```
+
+I confirmed also with large_sample_file_2.html, and the output file was as expected, with all b tags replaced with 
+blockquote tags.

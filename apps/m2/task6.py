@@ -33,7 +33,7 @@ def task6():
     # Write the prettified output to the output file, creating directories if needed
     output_file = Path(output_file)
     output_file.parent.mkdir(exist_ok=True, parents=True)
-    output_file.write_text(prettified_output_string)
+    output_file.write_text(prettified_output_string, encoding='utf-8')
 
 if __name__ == "__main__":
     task6()
