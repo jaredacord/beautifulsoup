@@ -1030,8 +1030,9 @@ class BeautifulSoup(Tag):
         ):
             return None
 
-        if self.replacer and (name.strip().lower() == self.replacer.og_tag):
-            name = self.replacer.alt_tag
+        if self.replacer and (self.replacer.og_tag and self.replacer.alt_tag):
+            if (name.strip().lower() == self.replacer.og_tag):
+                name = self.replacer.alt_tag
 
         tag_class = self.element_classes.get(Tag, Tag)
         # Assume that this is either Tag or a subclass of Tag. If not,
@@ -1050,8 +1051,15 @@ class BeautifulSoup(Tag):
             sourcepos=sourcepos,
             namespaces=namespaces,
         )
+
         if tag is None:
             return tag
+
+        if self.replacer:
+            tag.name = self.replacer.name_xform(tag)
+            tag.attrs = self.replacer.attrs_xform(tag)
+            self.replacer.xform(tag)
+
         if self._most_recent_element is not None:
             self._most_recent_element.next_element = tag
         self._most_recent_element = tag
